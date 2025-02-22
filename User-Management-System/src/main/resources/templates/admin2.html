@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin List</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #d4e6f1;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        input, button {
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        button {
+            cursor: pointer;
+        }
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+        }
+        .update-btn {
+            background: #ffc107;
+            color: black;
+            padding: 5px 10px;
+            border: none;
+        }
+        .add-btn {
+            background: #28a745;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Admin List</h2>
+    <input type="text" id="search" placeholder="Search by name or role" onkeyup="filterUsers()">
+    <button class="add-btn" onclick="openForm()">Create Admin</button>
+
+    <div class="table-container">
+        <table>
+            <thead>
+            <tr>
+                <th onclick="sortTable(0)">ID</th>
+                <th onclick="sortTable(1)">Name</th>
+                <th onclick="sortTable(2)">Email</th>
+                <th onclick="sortTable(3)">Role</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody id="usersTable"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const apiBaseUrl = "http://localhost:8080/api/users";
+
+    function fetchUsers() {
+        fetch(apiBaseUrl)
+            .then(response => response.json())
+            .then(data => {
+                const tableBody = document.getElementById("usersTable");
+                tableBody.innerHTML = "";
+                data.data.forEach(user => {
+                    const row = `<tr>
+                        <td>${user.uniqueId}</td>
+                        <td>${user.userName}</td>
+                        <td>${user.email}</td>
+                        <td>${user.role}</td>
+                        <td>
+                            <button class='update-btn' onclick="openForm(${user.uniqueId})">Update</button>
+                            <button class='delete-btn' onclick="deleteUser(${user.uniqueId})">Delete</button>
+                        </td>
+                    </tr>`;
+                    tableBody.innerHTML += row;
+                });
+            })
+            .catch(error => console.error("Error fetching users:", error));
+    }
+
+    function deleteUser(uniqueId) {
+        fetch(`${apiBaseUrl}/${uniqueId}`, { method: "DELETE" })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                fetchUsers();
+            })
+            .catch(error => console.error("Error deleting user:", error));
+    }
+
+    function sortTable(columnIndex) {
+        const table = document.querySelector("table tbody");
+        const rows = Array.from(table.rows);
+        const sortedRows = rows.sort((a, b) =>
+            a.cells[columnIndex].innerText.localeCompare(b.cells[columnIndex].innerText)
+        );
+        table.innerHTML = "";
+        sortedRows.forEach(row => table.appendChild(row));
+    }
+
+    function filterUsers() {
+        const searchValue = document.getElementById("search").value.toLowerCase();
+        const rows = document.querySelectorAll("table tbody tr");
+        rows.forEach(row => {
+            const text = row.innerText.toLowerCase();
+            row.style.display = text.includes(searchValue) ? "" : "none";
+        });
+    }
+
+    function openForm(userId = null) {
+        let name = prompt("Enter Name:");
+        let email = prompt("Enter Email:");
+        let role = prompt("Enter Role (admin/user):");
+        if (name && email && role) {
+            fetch(apiBaseUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ uniqueId: userId, userName: name, email: email, role: role })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                fetchUsers();
+            })
+            .catch(error => console.error("Error:", error));
+        }
+    }
+
+    fetchUsers();
+</script>
+
+</body>
+</html>
