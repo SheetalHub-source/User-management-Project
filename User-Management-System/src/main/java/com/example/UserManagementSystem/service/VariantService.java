@@ -6,6 +6,7 @@ import com.example.UserManagementSystem.dto.VariantResponse;
 import com.example.UserManagementSystem.entities.Product;
 import com.example.UserManagementSystem.entities.Variant;
 import com.example.UserManagementSystem.repository.VariantRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -49,17 +50,25 @@ public class VariantService {
         String imageUrl = saveImage(variantImage);
         if (variantRequest.uniqueId() == null) {
             Variant variant = new Variant();
-            variant.setOptionsData(variantRequest.optionsData());
+            ObjectMapper objectMapper = new ObjectMapper();
+            String optionsDataJson = objectMapper.writeValueAsString(variantRequest.optionsData());
+
+            variant.setOptionsData(optionsDataJson);
             variant.setImage(imageUrl);
             variant.setProduct(product);
-
+            System.out.println("Before Saved variant "+variant);
+            System.out.println("Before Optionsdata of saved variant "+ variant.getOptionsData());
             Variant savedVariant = variantRepository.save(variant);
+            System.out.println("Saved variant "+savedVariant);
+            System.out.println("Optionsdata of saved variant "+ savedVariant.getOptionsData());
             return convertToResponseDTO(variant);
         } else {
             Variant existingVariant = variantRepository.findByUniqueId(variantRequest.uniqueId());
             if (existingVariant == null)
                 throw new ResourceNotFoundException("Variant with this Unique id: " + variantRequest.uniqueId() + " is not found");
-            existingVariant.setOptionsData(variantRequest.optionsData());
+            ObjectMapper objectMapper = new ObjectMapper();
+            String optionsDataJson = objectMapper.writeValueAsString(variantRequest.optionsData());
+            existingVariant.setOptionsData(optionsDataJson);
             existingVariant.setImage(imageUrl);
             existingVariant.setProduct(product);
             Variant updateVariant = variantRepository.save(existingVariant);

@@ -20,7 +20,7 @@ public record ProductRequest(Long uniqueProductId,
                              @NotNull(message ="Product price must not be null" )
                              @Positive(message = "Product price must not be Negative")
                              Double price,
-                              Long categoryId,
+                             Long categoryId,
                              Set<VariantRequest> variantSet
 ) {
 

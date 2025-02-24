@@ -35,8 +35,13 @@ public class ProductController2 {
             @RequestParam String productRequestField,
             @RequestParam(value = "productImage",required = false) MultipartFile productImage,
             @RequestParam(value = "variantImage",required = false) MultipartFile[] variantImage) throws IOException {
+
+        System.out.println("Incoming Request field "+productRequestField);
             ObjectMapper objectMapper = new ObjectMapper();
             ProductRequest productRequest = objectMapper.readValue(productRequestField, ProductRequest.class);
+            System.out.println("Mapped productRequest "+productRequest);
+           System.out.println(productRequest.variantSet());
+        //productRequest.variantSet().
             ProductResponse productResponse = productService.createOrUpdateProductWithVariant(productRequest, productImage, variantImage);
             return ResponseEntity.status(HttpStatus.OK).body(productResponse);
     }

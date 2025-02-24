@@ -9,6 +9,7 @@ import com.example.UserManagementSystem.entities.Category;
 import com.example.UserManagementSystem.entities.Product;
 import com.example.UserManagementSystem.entities.Variant;
 import com.example.UserManagementSystem.repository.ProductRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -55,6 +56,7 @@ public class ProductService {
     }
 
     public ProductResponse createOrUpdateProductWithVariant(ProductRequest productRequest, MultipartFile productImage, MultipartFile[] variantImage) throws IOException {
+
         List<String> error = new ArrayList<>();
 
         if (variantImage == null && productRequest.variantSet() != null && !productRequest.variantSet().isEmpty()) {
@@ -104,7 +106,6 @@ public class ProductService {
         } else {
             throw new ResourceNotFoundException("Category not found for ID: " + productRequest.categoryId());
         }
-
         Set<VariantRequest> variantSet = productRequest.variantSet();
         Product savedProduct = productRepository.save(product);
         Set<VariantResponse> variantResponses = new HashSet<>();
@@ -116,11 +117,20 @@ public class ProductService {
                     variantResponses.add(variantService.createAndUpdateVariant(variantRequest, variantImage[count], product));
                 }
             }
+            ObjectMapper objectMapper = new ObjectMapper();
             Set<Variant> variants = variantResponses.stream()
                     .map(variantResponse -> {
                         Variant variant = new Variant();
                         variant.setUniqueId(variantResponse.uniqueId());
-                        variant.setOptionsData(variantResponse.attribute());
+
+                        try {
+                            // ✅ Convert optionsData (list) to JSON string
+                            String optionsDataJson = objectMapper.writeValueAsString(variantResponse.attribute());
+                            variant.setOptionsData(optionsDataJson);
+                        } catch (Exception e) {
+                            throw new RuntimeException("Error converting optionsData to JSON", e);
+                        }
+
                         variant.setImage(variantResponse.imageData()); // Assuming `image` exists in VariantResponse
                         return variant;
                     })

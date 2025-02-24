@@ -51,10 +51,11 @@ public class AdminController {
             @RequestParam(required = false) String uniqueId,
             @RequestParam(required = false) String userName,
             @RequestParam(required = false) String email,
-            @RequestParam(required = false) String role,
+            @RequestParam(defaultValue = "ADMIN") String role,  // Default role to ADMIN
             Model model) {
 
-        Page<UserResponse> userPage = usersService.getAllUsers(page, size, order, uniqueId, userName, email, field,role);
+
+        Page<UserResponse> userPage = usersService.getAllUsers(page, size, order, uniqueId, userName, email, field, role);
         List<UserResponse> users = userPage.getContent();
 
         model.addAttribute("users", users);
@@ -64,19 +65,10 @@ public class AdminController {
         model.addAttribute("sortDirection", order);
 
         return "admin";
+
     }
 
-    @PostMapping("/admin/update")
-    public String createOrUpdateAdmin(@Valid @ModelAttribute UserRequest userRequest,
-                                      RedirectAttributes redirectAttributes) {
-        usersService.createAndUpdateUser(userRequest);
 
-        // Add success message to display on the redirected page
-        redirectAttributes.addFlashAttribute("message", "Admin user updated successfully!");
-
-        // Redirect to Admin List page
-        return "redirect:/admin";
-    }
 
 
 

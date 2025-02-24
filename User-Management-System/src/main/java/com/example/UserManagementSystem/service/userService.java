@@ -30,13 +30,10 @@ public class userService {
     public UserResponse createAndUpdateUser(UserRequest userRequest) {
         if (userRequest.uniqueId() == null) {
             List<String> errors = new ArrayList<>();
-            if(userRepo.existsByUserName(userRequest.userName())){
-                errors.add("User with same username present...try another");
-            }
-            if(userRepo.existsByEmail(userRequest.email())){
+            if (userRepo.existsByEmail(userRequest.email())) {
                 errors.add("User with same email present...try another");
             }
-             errors.addAll(validateUserRequest(userRequest));
+            errors.addAll(validateUserRequest(userRequest));
             if (!errors.isEmpty()) {
                 throw new CustomValidationException(errors);
             }
@@ -94,44 +91,64 @@ public class userService {
         return password.matches(regex);
     }
 
-    private static UserResponse convertToDto(Users user) {
+    private UserResponse convertToDto(Users user) {
         return new UserResponse(user.getUniqueId(), user.getUserName(), user.getEmail(), user.getPassword());
     }
 
-    public Page<UserResponse> getAllUsers(int page, int size, String order, String uniqueId, String userName, String email, String field,String role) {
+    public  Page<UserResponse> getAllUsers(int page, int size, String order, String uniqueId, String userName, String email, String field, String role) {
         List<String> errors = new ArrayList<>();
 
-       if(uniqueId!=null) {
-            Users existingUser = userRepo.findByUniqueId(Long.valueOf(uniqueId));
-            if (existingUser == null) {
-                new ResourceNotFoundException("No account available with this unique ID");
+        // Validate Unique ID
+        if (uniqueId != null) {
+            try {
+                Users existingUser = userRepo.findByUniqueId(Long.valueOf(uniqueId));
+                if (existingUser == null) {
+                    throw new ResourceNotFoundException("No account available with this unique ID");
+                }
+            } catch (NumberFormatException e) {
+                errors.add("Invalid Unique ID! It must be a valid number.");
             }
         }
-        if (userName!=null&&!isValidName(userName)) {
+
+        // Validate Username
+        if (userName != null && !isValidName(userName)) {
             errors.add("Invalid username! Please use 5-15 characters, including letters, numbers, dots (.), underscores (_), or hyphens (-).");
         }
-        if (email!=null&&!email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,6}$")) {
+
+        // Validate Email
+        if (email != null && !email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,6}$")) {
             errors.add("Invalid email! Please enter a valid email address in the format: username@domain.com.");
         }
-        if (role!=null&&role.matches("(?i)^(USER|ADMIN|SUPERADMIN)$")) {
+
+        // Validate Role (Fixing reversed condition)
+        if (role != null && !role.matches("(?i)^(USER|ADMIN|SUPERADMIN)$")) {
             errors.add("Invalid role! Allowed values: USER, ADMIN, SUPERADMIN.");
         }
-        if (!order.matches("^(?i)(asc|desc)$")) {
+
+        // Validate Order
+        if (!order.matches("(?i)^(asc|desc)$")) {
             errors.add("Invalid order value. It must be 'asc' or 'desc' (case-insensitive).");
         }
+
+        // Validate Page and Size
         if (page < 0) {
-            errors.add("Page number should be positive");
+            errors.add("Page number should be positive.");
         }
         if (size < 1) {
-            errors.add("Size number should be positive");
+            errors.add("Size number should be positive.");
         }
 
+        // Throw validation errors immediately
         if (!errors.isEmpty()) {
             throw new CustomValidationException(errors);
         }
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(order), field));
+
+        // Sorting (Ensure case consistency)
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(order.toUpperCase()), field));
+
         Specification<Users> spec = Specification.where(null);
 
+        // Apply filters
         if (StringUtils.hasLength(uniqueId)) {
             spec = spec.and(userSpecification.hasUniqueId(Long.valueOf(uniqueId)));
         }
@@ -141,15 +158,13 @@ public class userService {
         if (StringUtils.hasLength(email)) {
             spec = spec.and(userSpecification.hasEmail(email));
         }
-        if(StringUtils.hasLength(role)){
+        if (StringUtils.hasLength(role)) {
             spec = spec.and(userSpecification.hasRole(role));
         }
 
         Page<Users> usersPage = userRepo.findAll(spec, pageable);
-        Page<UserResponse> userResponses = usersPage.map(users -> convertToDto(users));
-        return userResponses;
+        return usersPage.map(this::convertToDto);
     }
-
 
     public String deleteAdmin(Long uniqueId) {
         Users user = userRepo.findByUniqueId(uniqueId);

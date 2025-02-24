@@ -1,5 +1,6 @@
 package com.example.UserManagementSystem.entities;
 
+import com.example.UserManagementSystem.dto.VariantAttributes;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +24,7 @@ public class Variant {
     private Long uniqueId;
 
     @Lob
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "JSON")
     private String optionsData;
 
     @Lob
