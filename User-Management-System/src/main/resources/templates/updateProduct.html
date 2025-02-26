@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Product</title>
+    <style>
+        /* General Body Styling */
+html, body {
+    height: 100%;  /* Allow the page to stretch full height */
+    overflow: auto; /* Enable scrolling */
+    font-family: 'Arial', sans-serif;
+    background-color: #f7f7f7;
+    margin: 0;
+    padding: 0;
+}
+
+/* Modal Styling */
+#productModal {
+    background-color: rgba(0, 0, 0, 0.5);
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto; /* Enable scrolling within modal */
+    max-height: 100vh; /* Prevent modal from exceeding viewport height */
+    z-index: 9999; /* Ensure modal appears on top */
+}
+
+/* Modal Content Styling */
+.max-w-lg {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh; /* Allow modal content to scroll if it's too large */
+    overflow-y: auto; /* Scroll the content inside modal if it exceeds height */
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Header Styling */
+.flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+h3 {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #333;
+}
+
+span.cursor-pointer {
+    font-size: 1.5rem;
+    color: #333;
+    cursor: pointer;
+}
+
+span.cursor-pointer:hover {
+    color: #ff5c5c;
+}
+
+/* Form Inputs Styling */
+label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 8px;
+}
+
+input[type="text"],
+input[type="number"],
+select,
+textarea {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 16px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    box-sizing: border-box;
+    outline: none;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
+    border-color: #007bff;
+}
+
+textarea {
+    resize: vertical;
+    height: 120px;
+}
+
+/* Image Preview Styling */
+#imagePreview img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+}
+
+/* Button Styling */
+button {
+    background-color: #007bff;
+    color: white;
+    padding: 12px 20px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+button[type="button"] {
+    background-color: #28a745;
+    margin-top: 10px;
+}
+
+button[type="button"]:hover {
+    background-color: #218838;
+}
+
+/* Additional Variant Button Styling */
+.text-sm {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+/* Add Animation for Modal Fade-In */
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+    </style>
+</head>
+<body>
+
+<div id="productModal" class="hidden fixed inset-0 flex items-center justify-center">
+    <div class="max-w-lg w-full">
+        <div class="flex justify-between items-center">
+            <h3 class="text-lg font-bold">Update Product</h3>
+            <span class="cursor-pointer text-xl" onclick="closeForm()">&times;</span>
+        </div>
+
+        <form id="productForm" action="/product" method="post" enctype="multipart/form-data">
+            <!-- Hidden Input for JSON Data -->
+            <input type="hidden" id="productData" name="productData" th:value="${product.uniqueProductId}">
+
+            <label for="name" class="block text-sm font-semibold">Product Name:</label>
+            <input type="text" id="name" name="name" th:value="${product.productName}" required>
+
+            <label for="desc" class="block text-sm font-semibold mt-3">Product Description:</label>
+            <textarea id="desc" name="desc" th:text="${product.productDesc}" required></textarea>
+
+            <label for="price" class="block text-sm font-semibold mt-3">Price (₹):</label>
+            <input type="number" id="price" name="price" th:value="${product.price}" min="1" required>
+
+            <label for="categorySelect" class="block text-sm font-semibold mt-3">Category:</label>
+            <select name="category" id="categorySelect">
+                <option th:each="category : ${categories}"
+                        th:value="${category.id}"
+                        th:text="${category.categoryName}"
+                        th:selected="${category.categoryName == product.categoryName}">
+                </option>
+            </select>
+
+            <label for="image" class="block text-sm font-semibold mt-3">Product Image:</label>
+            <div id="imagePreview" class="mt-2">
+                <img th:src="${product.productImage}" alt="Product Image" id="productImagePreview" style="max-width: 200px; max-height: 200px; object-fit: cover;">
+            </div>
+
+            <input type="file" id="image" name="image" accept="image/*" class="mt-2">
+            <span class="text-sm text-gray-600 mt-2">Choose a new image if you want to update it.</span>
+
+            <button type="button" onclick="addVariant()">
+                + Add Variant
+            </button>
+
+            <div id="variants" class="mt-4"></div>
+
+            <button type="submit">Update Product</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // You can add your JavaScript here for adding variants or closing the form
+    function closeForm() {
+        document.getElementById('productModal').classList.add('hidden');
+    }
+
+    function addVariant() {
+        // Code to dynamically add variant inputs
+    }
+</script>
+
+</body>
+</html>

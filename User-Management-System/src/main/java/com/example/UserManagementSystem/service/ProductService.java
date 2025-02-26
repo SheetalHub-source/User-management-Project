@@ -41,7 +41,13 @@ public class ProductService {
 //    private String encodeImageToBase64(MultipartFile image) throws IOException {
 //        byte[] imageBytes = image.getBytes();
 //        return Base64.getEncoder().encodeToString(imageBytes);  // Correct usage
-//    }
+//
+
+
+    public ProductResponse findByUniqueProductId(Long uniqueProductId){
+        Product product=  productRepository.findByUniqueProductId(uniqueProductId).get();
+        return convertToProductResponse(product);
+    }
     private String saveImage(MultipartFile image) throws IOException {
          final String UPLOAD_DIR = System.getProperty("user.dir")+"/uploads";
             File uploadDir = new File(UPLOAD_DIR);
@@ -249,5 +255,4 @@ public class ProductService {
         Page<Product> productPage = productRepository.findAll(spec, pageable);
         return productPage.map(this::convertToProductResponse);
     }
-
 }

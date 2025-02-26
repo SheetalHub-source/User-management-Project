@@ -34,7 +34,6 @@ import java.util.Map;
 
 @Controller
 @Slf4j
-
 public class ProductController {
     @Autowired
     private ProductService productService;
@@ -43,6 +42,11 @@ public class ProductController {
     private CategoryService categoryService;
     @Autowired
     private VariantService variantService;
+    @Autowired
+    private  ObjectMapper objectMapper;
+
+
+
 
     @GetMapping("/product")
     public String readProductData(@RequestParam(defaultValue = "0") int page,
@@ -107,20 +111,29 @@ public class ProductController {
     }
 
 
-    @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_OCTET_STREAM_VALUE})
-    public String createOrUpdateProduct(
+    @PostMapping(value = "/product",consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_OCTET_STREAM_VALUE})
+    public ResponseEntity<ProductResponse> createOrUpdateProduct(
             @RequestParam String productRequestField,
-            @RequestParam(value = "productImage",required = false) MultipartFile productImage,
-            @RequestParam(value = "variantImage",required = false) MultipartFile[] variantImage) throws Exception {
+            @RequestParam(value = "productImage", required = false) MultipartFile productImage,
+            @RequestParam(value = "variantImage", required = false) MultipartFile[] variantImage) throws Exception {
 
-        System.out.println("Incoming Request field "+productRequestField);
-        ObjectMapper objectMapper = new ObjectMapper();
+        System.out.println("Incoming Request field: " + productRequestField);
         ProductRequest productRequest = objectMapper.readValue(productRequestField, ProductRequest.class);
-        System.out.println("Mapped productRequest "+productRequest);
-        System.out.println(productRequest.variantSet());
-        //productRequest.variantSet().
+        System.out.println("Mapped productRequest: " + productRequest);
+
         ProductResponse productResponse = productService.createOrUpdateProductWithVariant(productRequest, productImage, variantImage);
-        return "Product";
+        return ResponseEntity.ok(productResponse);
+    }
+    @GetMapping("/product/update/{uniqueProductId}")
+    public String getProduct(@PathVariable(name="uniqueProductId") Long uniqueProductId,Model model){
+         ProductResponse product = productService.findByUniqueProductId(uniqueProductId);
+         List<VariantResponse> variantResponses = variantService.findByProductId(uniqueProductId);
+        List<Category> categories = categoryService.getAllCategories();
+         model.addAttribute("product",product);
+         model.addAttribute("Variants",variantResponses);
+        model.addAttribute("categories", categories);
+
+        return "updateProduct";
     }
 
 
