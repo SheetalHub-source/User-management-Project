@@ -1,13 +1,13 @@
 package com.example.UserManagementSystem.service;
 
 import com.example.UserManagementSystem.ExceptionHandling.ResourceNotFoundException;
+import com.example.UserManagementSystem.dto.VariantAttributes;
 import com.example.UserManagementSystem.dto.VariantRequest;
 import com.example.UserManagementSystem.dto.VariantResponse;
 import com.example.UserManagementSystem.entities.Product;
 import com.example.UserManagementSystem.entities.Variant;
 import com.example.UserManagementSystem.repository.VariantRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,15 +17,31 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class VariantService {
     @Autowired
     private VariantRepository variantRepository;
 
-    private String encodeImageToBase64(MultipartFile image) throws IOException {
+    /*private String encodeImageToBase64(MultipartFile image) throws IOException {
         byte[] imageBytes = image.getBytes();
         return Base64.getEncoder().encodeToString(imageBytes);  // Correct usage
+    }*/
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public String convertToJson(List<VariantAttributes> attributes) throws Exception {
+        // Ensure order is maintained before saving
+        List<Map<String, String>> orderedList = attributes.stream()
+                .map(attr -> {
+                    Map<String, String> orderedMap = new LinkedHashMap<>();
+                    orderedMap.put("option", attr.option());  // "option" first
+                    orderedMap.put("value", attr.value());  // "value" second
+                    return orderedMap;
+                })
+                .toList();
+
+        return objectMapper.writeValueAsString(orderedList);
     }
     private String saveImage(MultipartFile image) throws IOException {
         final String UPLOAD_DIR = System.getProperty("user.dir")+"/uploads";
@@ -46,13 +62,12 @@ public class VariantService {
     }
 
     /// CREATE AND UPDATE VARIANT
-    public VariantResponse createAndUpdateVariant(VariantRequest variantRequest, MultipartFile variantImage, Product product) throws IOException {
+    public VariantResponse createAndUpdateVariant(VariantRequest variantRequest, MultipartFile variantImage, Product product) throws Exception {
         String imageUrl = saveImage(variantImage);
         if (variantRequest.uniqueId() == null) {
             Variant variant = new Variant();
-            ObjectMapper objectMapper = new ObjectMapper();
-            String optionsDataJson = objectMapper.writeValueAsString(variantRequest.optionsData());
 
+            String optionsDataJson = convertToJson(variantRequest.optionsData());
             variant.setOptionsData(optionsDataJson);
             variant.setImage(imageUrl);
             variant.setProduct(product);
@@ -77,72 +92,6 @@ public class VariantService {
 
     }
 
-    /*public Map<String, Object> deleteVariant(List<Long> variantIds, Long uniqueProductId) {
-        List<String> notDeleted = new ArrayList<>();
-        List<String> successfullyDeleted = new ArrayList<>();
-        List<Long> ids = new ArrayList<>();
-        for (Long uniqueVariantId : variantIds) {
-            Variant existingVariant = variantRepository.findByUniqueId(uniqueVariantId);
-
-            if (existingVariant == null) {
-                notDeleted.add("Variant with Unique ID " + uniqueVariantId + " not found for deletion.");
-                continue;
-            }
-
-            if (existingVariant.getProduct().getUniqueProductId().equals(uniqueProductId)) {
-                successfullyDeleted.add("Variant with Unique ID " + uniqueVariantId + " deleted successfully.");
-                ids.add(uniqueVariantId);
-            } else {
-                notDeleted.add("Variant ID " + uniqueVariantId + " cannot be deleted as it is not linked to Product ID " + uniqueProductId + ".");
-            }
-        }
-        for (Long idn : ids) {
-            variantRepository.deleteByUniqueId(idn);
-        }
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("Deleted Variants", successfullyDeleted);
-        result.put("Not Deleted Variants", notDeleted);
-
-        return result;
-    }
-
-*/
- /*   public Map<String, Object> deleteVariant(Long[] variantIds, Long uniqueProductId) {
-        List<String> notDeleted = new ArrayList<>();
-        List<String> successfullyDeleted = new ArrayList<>();
-        List<Long> ids=new ArrayList<>();
-        for (Long uniqueVariantId : variantIds) {
-            Variant existingVariant = variantRepository.findByUniqueId(uniqueVariantId);
-
-            if (existingVariant == null) {
-                notDeleted.add("Variant with Unique ID " + uniqueVariantId + " not found for deletion.");
-                continue;
-            }
-
-            if (existingVariant.getProduct().getUniqueProductId().equals(uniqueProductId)) {
-                successfullyDeleted.add("Variant with Unique ID " + uniqueVariantId + " deleted successfully.");
-                ids.add(uniqueVariantId);
-            } else {
-                notDeleted.add("Variant ID " + uniqueVariantId + " cannot be deleted as it is not linked to Product ID " + uniqueProductId + ".");
-            }
-        }
-
-        // Instead of deleting within the loop, collect the ids to delete
-        List<Long> idsToDelete = new ArrayList<>(ids);
-        System.out.println("Ids to be deleted are "+idsToDelete);
-       // variantRepository.deleteByUniqueIds(idsToDelete);
-
-        for (Long idn : idsToDelete) {
-            variantRepository.deleteByUniqueId(idn);  // Now we are deleting from the copied list
-        }
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("Deleted Variants", successfullyDeleted);
-        result.put("Not Deleted Variants", notDeleted);
-
-        return result;
-    }*/
     public List<String> deleteVariants( Long variantId, Long uniqueProductId) {
            List<String> msg = new ArrayList<>();
             Variant existingVariant = variantRepository.findByUniqueId(variantId);
@@ -161,13 +110,19 @@ public class VariantService {
 
 
 
-
-
-    public List<Variant> findByProductId(Long uniqueProductId) {
-        return  variantRepository.findByProductId(uniqueProductId);
+    public List<VariantResponse> findByProductId(Long uniqueProductId) {
+          List<Variant> variants=variantRepository.findByProductId(uniqueProductId);
+            return variants.stream()
+                .map(variant -> new VariantResponse(
+                        variant.getUniqueId(),
+                        variant.getOptionsData(),
+                        variant.getImage()
+                ))
+                .collect(Collectors.toList());
     }
 
     public void deleteAll(List<Variant> productVariants) {
         variantRepository.deleteAll(productVariants);
     }
+
 }

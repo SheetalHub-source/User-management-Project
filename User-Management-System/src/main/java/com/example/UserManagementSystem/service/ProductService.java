@@ -55,7 +55,8 @@ public class ProductService {
             return imageUrl;
     }
 
-    public ProductResponse createOrUpdateProductWithVariant(ProductRequest productRequest, MultipartFile productImage, MultipartFile[] variantImage) throws IOException {
+
+    public ProductResponse createOrUpdateProductWithVariant(ProductRequest productRequest, MultipartFile productImage, MultipartFile[] variantImage) throws Exception {
 
         List<String> error = new ArrayList<>();
 
@@ -146,36 +147,19 @@ public class ProductService {
                 .stream()
                 .map(variant -> new VariantResponse(variant.getUniqueId(),variant.getOptionsData(),variant.getImage()))
                 .collect(Collectors.toSet());
-        return new ProductResponse(product.getUniqueProductId(),
+        return new ProductResponse(
+                product.getId(),
+                product.getUniqueProductId(),
                 product.getProductName(),
                 product.getProductDesc(),
                 product.getPrice(),
                 product.getImageData(),
                 product.getCategryName(),
+                product.getCreatedAt(),
+                product.getUpdatedAt(),
                 variantResponses
         );
     }
-
-    /*public Map<String, Object> deleteProductOrVariants(Long uniqueProductId,Long[]variantIds) {
-        Product product = productRepository.findByUniqueProductId(uniqueProductId);
-        Map<String, Object> result = new HashMap<>();
-        if (product == null) {
-            throw new ResourceNotFoundException("Product with Unique Product Id " + uniqueProductId + " is not Present. Please try another valid ProductId..");
-        }
-        log.info(variantIds.length + " and " + product.getVariantSet().size());
-        if (variantIds != null && product.getVariantSet().size() < variantIds.length) {
-            throw new IllegalArgumentException("Provided variant IDs exceed the total number of variants for this product.");
-        }
-
-        if (variantIds != null && !(variantIds.length==0)){
-            result = variantService.deleteVariant(variantIds, uniqueProductId);
-        } else {
-            productRepository.delete(product);
-            result.put("message", "Product deleted successfully.");
-        }
-
-        return result;
-    }*/
     public Map<String, Object> deleteProductOrVariants(Long uniqueProductId, Long[] variantIds) {
         Product product = productRepository.findByUniqueProductId(uniqueProductId).
                 orElseThrow(()->new ResourceNotFoundException("Product with Unique Product Id " + uniqueProductId + " is not present." +
@@ -200,7 +184,7 @@ public class ProductService {
     }
 
 
-    public Page<ProductResponse> findByCriteria(int page, int size, String sortBy, String order, Long uniqueProductId, Long categoryId, String productName, String categoryName,String optionsData) {
+    public Page<ProductResponse> findByCriteria(int page, int size, String sortBy, String order, Long uniqueProductId, Long categoryId, String productName, String categoryName,String optionsData,Long minPrice,Long maxPrice) {
         List<String> errors = new ArrayList<>();
 
         if (page <0) {
@@ -227,6 +211,16 @@ public class ProductService {
         if(optionsData!=null&&!productRepository.existsByVariantOptions(optionsData)){
             errors.add("No products present with this variant data");
         }
+        if (minPrice != null && maxPrice != null && minPrice > maxPrice) {
+            errors.add("Invalid range: minPrice cannot be greater than maxPrice.");
+        }
+        else if (minPrice == null && maxPrice != null) {
+            minPrice = productRepository.findMinPrice();
+        } else if (maxPrice == null && minPrice != null) {
+            maxPrice = productRepository.findMaxPrice();
+        }
+
+
 
         if (!errors.isEmpty()) {
             throw new CustomValidationException(errors);
@@ -249,7 +243,11 @@ public class ProductService {
         if (StringUtils.hasLength(optionsData)) {
             spec = spec.and(ProductSpecification.hasVariantWithOptionData(optionsData));
         }
+        if (minPrice != null || maxPrice != null) {
+            spec = spec.and(ProductSpecification.hasPriceRange(minPrice, maxPrice));
+        }
         Page<Product> productPage = productRepository.findAll(spec, pageable);
         return productPage.map(this::convertToProductResponse);
     }
+
 }

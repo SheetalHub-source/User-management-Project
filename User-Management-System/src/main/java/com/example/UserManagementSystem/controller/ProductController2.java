@@ -34,7 +34,7 @@ public class ProductController2 {
     public ResponseEntity<?> createOrUpdateProduct(
             @RequestParam String productRequestField,
             @RequestParam(value = "productImage",required = false) MultipartFile productImage,
-            @RequestParam(value = "variantImage",required = false) MultipartFile[] variantImage) throws IOException {
+            @RequestParam(value = "variantImage",required = false) MultipartFile[] variantImage) throws Exception {
 
         System.out.println("Incoming Request field "+productRequestField);
             ObjectMapper objectMapper = new ObjectMapper();
@@ -95,9 +95,11 @@ public class ProductController2 {
                                              @RequestParam(required = false) Long categoryId,
                                              @RequestParam(required = false)String productName,
                                              @RequestParam(required = false) String categoryName,
-                                             @RequestParam(required = false) String optionsData)
+                                             @RequestParam(required = false) String variant,
+                                             @RequestParam(required = false) Long minPrice,
+                                             @RequestParam(required = false) Long maxPrice)
     {
-        Page<ProductResponse> productResponses = productService.findByCriteria(page,size,field,orderBy,uniqueProductId,categoryId,productName,categoryName,optionsData);
+        Page<ProductResponse> productResponses = productService.findByCriteria(page,size,field,orderBy,uniqueProductId,categoryId,productName,categoryName,variant,minPrice,maxPrice);
         return ResponseEntity.status(HttpStatus.OK).body(productResponses.getContent());
     }
 }

@@ -24,6 +24,18 @@ public class ProductSpecification {
             return criteriaBuilder.like(variantJoin.get("optionsData"), "%" + optionData + "%");
         };
     }
+    public static Specification<Product> hasPriceRange(Long minPrice, Long maxPrice) {
+        return (root, query, criteriaBuilder) -> {
+            if (minPrice != null && maxPrice != null) {
+                return criteriaBuilder.between(root.get("price"), minPrice, maxPrice);
+            } else if (minPrice != null) {
+                return criteriaBuilder.greaterThanOrEqualTo(root.get("price"), minPrice);
+            } else if (maxPrice != null) {
+                return criteriaBuilder.lessThanOrEqualTo(root.get("price"), maxPrice);
+            }
+            return criteriaBuilder.conjunction(); // Returns all products if no price filters are applied
+        };
+    }
 
 
 }

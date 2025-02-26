@@ -27,46 +27,10 @@ import java.util.function.Function;
 public class CategoryService {
     @Autowired
     private CategoryRepository categoryRepository;
-   /* public Page<CategoryResponse> findByCrieteria(int page, int size, String order, String field, String categoryName, String categoryDesc, String uniqueId) {
-        List<String> errors = new ArrayList<>();
-        if(uniqueId!=null) {
-            Category existingCategory = categoryRepository.findByUniqueId(Long.valueOf(uniqueId));
-            if (existingCategory == null) {
-               errors.add("No Category available with this unique ID");
-            }
-        }
-        if (categoryName!=null&&!categoryRepository.existsByCategoryName(categoryName)) {
-            errors.add("No Category available with this Category Name..");
-        }
-        if (!order.matches("^(?i)(asc|desc)$")) {
-            errors.add("Invalid order value. It must be 'asc' or 'desc' (case-insensitive).");
-        }
-        if (page < 0) {
-            errors.add("Page number should be positive");
-        }
-        if (size < 1) {
-            errors.add("Size number should be positive");
-        }
-        if (!errors.isEmpty()) {
-            throw new CustomValidationException(errors);
-        }
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(order), field));
-        Specification<Category> spec = Specification.where(null);
-        if(StringUtils.hasLength(categoryName)){
-           spec   =   spec.and(CategorySpecification.hasCategoryName(categoryName));
-        }
-        if(StringUtils.hasLength(categoryDesc)){
-            spec   =   spec.and(CategorySpecification.hasCategoryDescription(categoryDesc));
-        }
-        if (StringUtils.hasLength(uniqueId)) {
-            spec = spec.and(CategorySpecification.hasUniqueId(Long.valueOf(uniqueId)));
-        }
-        Page<Category> categoryPage =categoryRepository.findAll(spec,pageable);
-        Page<CategoryResponse> categoryResponsePage = categoryPage.map(category -> convertToResponseDto(category));
-        return categoryResponsePage;
-    }*/
+
    public Page<CategoryResponse> findByCriteria(int page, int size, String order, String field, String categoryName, String categoryDesc, String uniqueId) {
        List<String> errors = new ArrayList<>();
+
 
 
        Long uniqueIdLong = null;
@@ -171,5 +135,10 @@ public class CategoryService {
         }
         return categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new RuntimeException("Category not found with id: " + categoryId));
+    }
+
+
+    public List<Category> getAllCategories() {
+      return categoryRepository.findAll();
     }
 }
